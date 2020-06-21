@@ -195,8 +195,9 @@ class POS:
             character_normalization = True,
             batch_sentences = 2048,
             batch_characters = 16384,
+
+            k = 1
         ):
-        
         # Character normalization
         if character_normalization:
             raw_sentence_list = sentence_list
@@ -207,7 +208,7 @@ class POS:
                     word = unicodedata.normalize("NFKD", raw_word)
                     sentence.append(word)
                 sentence_list.append(sentence)
-                
+
         # Sentence segmentation
         segment_list = []
         segment_to_sentence_index = []
@@ -228,7 +229,10 @@ class POS:
             if len(sample_list[0][0]) == 0:
                 parital_pos_segment_list = [[] for sample in sample_list]
             else:
-                parital_pos_segment_list = self.model.predict_label_for_a_batch(sample_list)
+                if k > 1:
+                    parital_pos_segment_list = self.model.predict_top_k_label_for_a_batch(sample_list, k=k)
+                else:
+                    parital_pos_segment_list = self.model.predict_label_for_a_batch(sample_list)
             for partial_index, index in enumerate(index_list):
                 pos_segment_list[index] = parital_pos_segment_list[partial_index]
                 

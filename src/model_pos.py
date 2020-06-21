@@ -435,6 +435,46 @@ class Model:
             prediction_list.append(prediction)
             
         return prediction_list
+
+    def predict_top_k_label_for_a_batch(self, sample_list, k=5):
+        """Generate token label sequence for each sample in the mini-batch.
+        
+        prediction_list: [prediction]
+            prediction: [token_label]
+        """
+        assert k <= len(self.label_list)
+        (
+            s_l,
+            c_k, c_v,
+            w_k, w_v,
+            _, o_mask,
+        ) = self.get_formatted_input(sample_list)
+        
+        logits = self.sess.run( # [batch, s_l_max, output_d]
+            self.logits,
+            feed_dict = {
+                self.bilstm.kr: 1.0,
+                self.s_l: s_l,
+                self.s_l: s_l,
+                self.c_k: c_k,
+                self.c_v: c_v,
+                self.w_k: w_k,
+                self.w_v: w_v,
+            }
+        )
+        
+        labelindex_sequence_list_top_k = np.argpartition(logits, -k, axis=2)[:,:,-k:]
+        prediction_list = []
+        
+        for b, k_labelindex_sequence in enumerate(labelindex_sequence_list_top_k):
+            prediction = []
+            for t, k_label_index in enumerate(k_labelindex_sequence[:s_l[b]]):
+                if o_mask[b,t] == 1:
+                    k_labels = [self.label_list[lb_index] for lb_index in k_label_index]
+                    prediction.append(k_labels)
+            prediction_list.append(prediction)
+            
+        return prediction_list
         
 def main():
     config = Config()
